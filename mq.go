@@ -34,3 +34,13 @@ type Publisher interface {
 	Publish(messageType string, message Message) error
 	Close() error
 }
+
+// Logger is a very basic pluggable module some rmq implementations
+// optionally accept to log certain important events. Note that this
+// should always be an optional feature.
+type Logger interface {
+	Info(args ...interface{})
+	Debug(args ...interface{})
+	Warn(args ...interface{})
+	Error(args ...interface{})
+}
