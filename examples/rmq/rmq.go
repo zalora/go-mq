@@ -12,7 +12,14 @@ func main() {
 	rmqURL := "amqp://rpmvioqv:6skaAUvjscD5wYNwYAHDJpokk3mniG7t@vulture.rmq.cloudamqp.com/rpmvioqv"
 
 	log.Println("connecting to rmq host")
-	connection, err := rmq.NewConnection(rmqURL, 5*time.Second, nil, nil, "exampleService", "1123")
+	connection, err := rmq.NewConnection(rmqURL,
+		rmq.Config{
+			ReconnectInterval: 2 * time.Second,
+			Logger:            nil,
+			AmqpDialler:       nil,
+			ServiceName:       "",
+			CommitID:          "",
+		})
 	if err != nil {
 		log.Fatal(err, "error making new rmq connection")
 	}

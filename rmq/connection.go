@@ -30,49 +30,61 @@ type Connection struct {
 	retryForever      bool
 }
 
-// NewConnection returns a new instance of Connection.
-// It takes a reconnectInterval to attempt reconnections in case of a
-// connection failure. It accepts a logger that conforms to mq.Logger.
-// logger is optional and if nil, would result in the rmq connection
-// not logging anything.
+// Config is a set of optional configurations to tune up the
+// rmq connection and its retries.
 // It also accepts a serviceName and commitID
 // that it logs to the exchange while making the connection.
 // These can be passed as blanks.
-// Sending a nil dialler would result in the library creating a
-// default dialler.
+type Config struct {
+	// ReconnectInterval is set to attempt reconnections in case of a
+	// connection failure.
+	ReconnectInterval time.Duration
+
+	// Logger is optional and if nil, would result in the rmq connection
+	// not logging anything.
+	Logger mq.Logger
+
+	// AmqpDialler if nil would result in the library creating a
+	// DefaultAmqpDialler.
+	AmqpDialler AmqpDialler
+
+	// ServiceName is listed as service in the connection.
+	ServiceName string
+
+	// CommmitID is listed as the version in the connection.
+	CommitID string
+}
+
+// NewConnection returns a new instance of Connection.
 func NewConnection(
 	url string,
-	reconnectInterval time.Duration,
-	logger mq.Logger,
-	amqpDialler AmqpDialler,
-	serviceName string,
-	commitID string,
+	cfg Config,
 ) (*Connection, error) {
 
-	cfg := amqp.Config{
+	amqpConfig := amqp.Config{
 		Properties: amqp.Table{
-			"service": serviceName,
-			"version": commitID,
+			"service": cfg.ServiceName,
+			"version": cfg.CommitID,
 		}}
 
-	if amqpDialler == nil {
-		amqpDialler = &DefaultAmqpDialler{}
+	if cfg.AmqpDialler == nil {
+		cfg.AmqpDialler = &DefaultAmqpDialler{}
 	}
 
-	amqpConn, err := amqpDialler.DialConfig(url, cfg)
+	amqpConn, err := cfg.AmqpDialler.DialConfig(url, amqpConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "error dialing to rmq url")
 	}
 
 	conn := &Connection{
-		reconnectInterval: reconnectInterval,
+		reconnectInterval: cfg.ReconnectInterval,
 		closeCh:           make(chan struct{}, 1),
-		logger:            logger,
+		logger:            cfg.Logger,
 		amqpConn:          amqpConn,
-		amqpDialler:       amqpDialler,
+		amqpDialler:       cfg.AmqpDialler,
 	}
 
-	go conn.handleConnectionErr(url, cfg)
+	go conn.handleConnectionErr(url, amqpConfig)
 	return conn, nil
 }
 

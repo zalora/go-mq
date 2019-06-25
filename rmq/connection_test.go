@@ -62,9 +62,13 @@ func Test_NewChannel(t *testing.T) {
 				channelErrors:        testCase.notifyErrors,
 			}
 			fd := &fakeDialler{amqpConn: fakeAmqp}
-			conn, err := NewConnection("some-url", testCase.reconnectInterval, nil, fd, "", "")
-			assert.Nil(err)
-
+			conn, err := NewConnection("some-url", Config{
+				ReconnectInterval: testCase.reconnectInterval,
+				Logger:            nil,
+				AmqpDialler:       fd,
+				ServiceName:       "",
+				CommitID:          "",
+			})
 			if testCase.retryForever {
 				conn = conn.RetryForever()
 			}
