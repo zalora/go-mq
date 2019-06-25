@@ -89,7 +89,7 @@ func (c *Connection) NewChannel() (*amqp.Channel, error) {
 				return ch, nil
 			}
 			if !c.retryForever {
-				return nil, err
+				return nil, errors.Wrap(err, "error getting channel from amqp")
 			}
 		}
 	}
