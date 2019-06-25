@@ -1,7 +1,7 @@
 package rmq
 
 import (
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -9,11 +9,21 @@ import (
 	"github.com/zalora/go-mq"
 )
 
+// AmqpConn is an interface that abstracts out functions from
+// amqp.Conn that are needed by this library itself.
+type AmqpConn interface {
+	Channel() (*amqp.Channel, error)
+	Close() error
+	NotifyClose(receiver chan *amqp.Error) chan *amqp.Error
+}
+
 // Connection is a representation of an rmq connection. It has internal
 // specifications that enable it to be threadsafe and fault tolerant
 // of connection drops.
 type Connection struct {
-	amqpConn          atomic.Value
+	sync.Mutex
+	amqpConn          AmqpConn
+	amqpDialler       AmqpDialler
 	reconnectInterval time.Duration
 	closeCh           chan struct{}
 	logger            mq.Logger
@@ -28,10 +38,13 @@ type Connection struct {
 // It also accepts a serviceName and commitID
 // that it logs to the exchange while making the connection.
 // These can be passed as blanks.
+// Sending a nil dialler would result in the library creating a
+// default dialler.
 func NewConnection(
 	url string,
 	reconnectInterval time.Duration,
 	logger mq.Logger,
+	amqpDialler AmqpDialler,
 	serviceName string,
 	commitID string,
 ) (*Connection, error) {
@@ -42,7 +55,11 @@ func NewConnection(
 			"version": commitID,
 		}}
 
-	amqpConn, err := amqp.DialConfig(url, cfg)
+	if amqpDialler == nil {
+		amqpDialler = &DefaultAmqpDialler{}
+	}
+
+	amqpConn, err := amqpDialler.DialConfig(url, cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "error dialing to rmq url")
 	}
@@ -51,9 +68,10 @@ func NewConnection(
 		reconnectInterval: reconnectInterval,
 		closeCh:           make(chan struct{}, 1),
 		logger:            logger,
+		amqpConn:          amqpConn,
+		amqpDialler:       amqpDialler,
 	}
 
-	conn.amqpConn.Store(amqpConn)
 	go conn.handleConnectionErr(url, cfg)
 	return conn, nil
 }
@@ -73,18 +91,16 @@ func (c *Connection) RetryForever() *Connection {
 	return c
 }
 
-func (c *Connection) amqpConnection() *amqp.Connection {
-	return c.amqpConn.Load().(*amqp.Connection)
-}
-
 // NewChannel is an amqp channel wrapped with retrying logic.
 // It is the part that makes this implementation fault tolerant.
 func (c *Connection) NewChannel() (*amqp.Channel, error) {
-	ch, err := c.amqpConnection().Channel()
+	c.Lock()
+	defer c.Unlock()
+	ch, err := c.amqpConn.Channel()
 	if err != nil {
 		for {
 			time.Sleep(2 * c.reconnectInterval)
-			ch, err := c.amqpConnection().Channel()
+			ch, err := c.amqpConn.Channel()
 			if err == nil {
 				return ch, nil
 			}
@@ -97,14 +113,16 @@ func (c *Connection) NewChannel() (*amqp.Channel, error) {
 }
 
 func (c *Connection) handleConnectionErr(url string, cfg amqp.Config) {
+	c.Lock()
+	defer c.Unlock()
 	connErrCh := make(chan *amqp.Error, 1)
 	isConnAlive := true
-	c.amqpConnection().NotifyClose(connErrCh)
+	c.amqpConn.NotifyClose(connErrCh)
 	for {
 		select {
 		case <-c.closeCh:
 			if isConnAlive {
-				c.amqpConnection().Close()
+				c.amqpConn.Close()
 			}
 			c.closeCh = nil
 			return
@@ -113,7 +131,7 @@ func (c *Connection) handleConnectionErr(url string, cfg amqp.Config) {
 			if c.logger != nil {
 				c.logger.Info("rabbitmq connection lost")
 			}
-			amqpConn, err := amqp.DialConfig(url, cfg)
+			amqpConn, err := c.amqpDialler.DialConfig(url, cfg)
 			if err != nil {
 				time.Sleep(c.reconnectInterval)
 				continue
@@ -124,7 +142,6 @@ func (c *Connection) handleConnectionErr(url string, cfg amqp.Config) {
 			if c.logger != nil {
 				c.logger.Info("rabbitmq connection restored")
 			}
-			c.amqpConn.Store(amqpConn)
 		}
 	}
 }
