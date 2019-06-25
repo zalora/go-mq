@@ -4,6 +4,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 	"github.com/zalora/go-mq"
 )
@@ -20,15 +21,30 @@ type Connection struct {
 }
 
 // NewConnection returns a new instance of Connection.
-// It takes a rabbitmq url, an amqp.Config (TODO: make this optional
-// and a reconnectInterval to attempt reconnections in case of a
-// connection failure.
-func NewConnection(url string, cfg amqp.Config,
+// It takes a reconnectInterval to attempt reconnections in case of a
+// connection failure. It accepts a logger that conforms to mq.Logger.
+// logger is optional and if nil, would result in the rmq connection
+// not logging anything.
+// It also accepts a serviceName and commitID
+// that it logs to the exchange while making the connection.
+// These can be passed as blanks.
+func NewConnection(
+	url string,
 	reconnectInterval time.Duration,
-	logger mq.Logger) (*Connection, error) {
+	logger mq.Logger,
+	serviceName string,
+	commitID string,
+) (*Connection, error) {
+
+	cfg := amqp.Config{
+		Properties: amqp.Table{
+			"service": serviceName,
+			"version": commitID,
+		}}
+
 	amqpConn, err := amqp.DialConfig(url, cfg)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error dialing to rmq url")
 	}
 
 	conn := &Connection{
