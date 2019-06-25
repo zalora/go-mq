@@ -3,7 +3,6 @@
 [![Build Status](https://api.travis-ci.org/zalora/go-mq.svg?branch=master)](https://travis-ci.org/zalora/go-mq)
 [![Go Report Card](https://goreportcard.com/badge/github.com/zalora/go-mq)](https://goreportcard.com/report/github.com/zalora/go-mq)
 [![GoDoc](https://godoc.org/github.com/zalora/go-mq?status.svg)](https://godoc.org/github.com/zalora/go-mq)
-![Lines of Code](https://tokei.rs/b1/github/zalora/go-mq)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://en.wikipedia.org/wiki/MIT_License)
 
 A message queue library in Go. go-mq aims to be a high level abstraction
