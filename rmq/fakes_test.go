@@ -1,6 +1,8 @@
 package rmq
 
-import "github.com/streadway/amqp"
+import (
+	"github.com/streadway/amqp"
+)
 
 type fakeAmqpConn struct {
 	ch                   *amqp.Channel

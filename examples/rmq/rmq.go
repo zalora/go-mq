@@ -24,4 +24,5 @@ func main() {
 	}
 
 	fmt.Println(ch)
+	time.Sleep(10 * time.Second)
 }

@@ -124,7 +124,11 @@ func (c *Connection) handleConnectionErr(url string, cfg amqp.Config) {
 			}
 			c.closeCh = nil
 			return
-		case <-connErrCh:
+		case connErr := <-connErrCh:
+			// We don't want to try to recover if rmq tells us not to recover.
+			if !connErr.Recover {
+				return
+			}
 			isConnAlive = false
 			if c.logger != nil {
 				c.logger.Info("rabbitmq connection lost")

@@ -19,6 +19,7 @@ func Test_NewChannel(t *testing.T) {
 		numberOfTimesToReturnErr int
 		retryForever             bool
 		channel                  *amqp.Channel
+		notifyErrors             []*amqp.Error
 	}{
 		{
 			desc:              "for a general case, when amqp returns a channel, return a new usable channel to the caller",
@@ -41,6 +42,13 @@ func Test_NewChannel(t *testing.T) {
 			numberOfTimesToReturnErr: 2,
 			retryForever:             true,
 		},
+		{
+			desc: "if the notify function has recoverable errors when the connection is active, they are handled without a crash",
+			notifyErrors: []*amqp.Error{
+				&amqp.Error{Code: 1, Reason: "no reason", Recover: true},
+				&amqp.Error{Code: 2, Reason: "no reason", Recover: true},
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -51,6 +59,7 @@ func Test_NewChannel(t *testing.T) {
 				ch:                   testCase.channel,
 				err:                  testCase.channelError,
 				noOfCallsToReturnErr: testCase.numberOfTimesToReturnErr,
+				channelErrors:        testCase.notifyErrors,
 			}
 			fd := &fakeDialler{amqpConn: fakeAmqp}
 			conn, err := NewConnection("some-url", testCase.reconnectInterval, nil, fd, "", "")
@@ -66,6 +75,13 @@ func Test_NewChannel(t *testing.T) {
 				assert.Equal(testCase.expectedError.Error(), err.Error())
 			}
 			assert.Equal(testCase.channel, ch)
+
+			// ugly yes. But in a real production scenario, this call will
+			// be part of a daemon so it makes sense to add this sleep.
+			if len(testCase.notifyErrors) > 0 {
+				time.Sleep(1 * time.Second)
+			}
+
 			conn.Close()
 
 		})
