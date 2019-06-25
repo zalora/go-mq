@@ -1,7 +1,6 @@
 package rmq
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -98,7 +97,6 @@ func (c *Connection) NewChannel() (*amqp.Channel, error) {
 	c.Lock()
 	defer c.Unlock()
 	ch, err := c.amqpConn.Channel()
-	fmt.Println(ch, err)
 	if err != nil {
 		for {
 			time.Sleep(2 * c.reconnectInterval)
