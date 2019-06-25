@@ -11,9 +11,10 @@ type AmqpDialler interface {
 	DialConfig(url string, config amqp.Config) (AmqpConn, error)
 }
 
-// DefaultAmqpDialler is just a light wrapper on amqp.DialConfig.
+// DefaultAmqpDialler returns an AmqpConn implemented by streadway/amqp.
 type DefaultAmqpDialler struct{}
 
+// DialConfig is just a light wrapper on amqp.DialConfig.
 func (d *DefaultAmqpDialler) DialConfig(url string, config amqp.Config) (AmqpConn, error) {
 	return amqp.DialConfig(url, config)
 }
