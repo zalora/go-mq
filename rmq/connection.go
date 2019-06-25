@@ -1,6 +1,7 @@
 package rmq
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -97,6 +98,7 @@ func (c *Connection) NewChannel() (*amqp.Channel, error) {
 	c.Lock()
 	defer c.Unlock()
 	ch, err := c.amqpConn.Channel()
+	fmt.Println(ch, err)
 	if err != nil {
 		for {
 			time.Sleep(2 * c.reconnectInterval)
@@ -113,8 +115,6 @@ func (c *Connection) NewChannel() (*amqp.Channel, error) {
 }
 
 func (c *Connection) handleConnectionErr(url string, cfg amqp.Config) {
-	c.Lock()
-	defer c.Unlock()
 	connErrCh := make(chan *amqp.Error, 1)
 	isConnAlive := true
 	c.amqpConn.NotifyClose(connErrCh)
@@ -131,17 +131,21 @@ func (c *Connection) handleConnectionErr(url string, cfg amqp.Config) {
 			if c.logger != nil {
 				c.logger.Info("rabbitmq connection lost")
 			}
-			amqpConn, err := c.amqpDialler.DialConfig(url, cfg)
-			if err != nil {
-				time.Sleep(c.reconnectInterval)
-				continue
-			}
-			isConnAlive = true
-			connErrCh = make(chan *amqp.Error, 1)
-			amqpConn.NotifyClose(connErrCh)
-			if c.logger != nil {
-				c.logger.Info("rabbitmq connection restored")
-			}
+			func() {
+				c.Lock()
+				defer c.Unlock()
+				amqpConn, err := c.amqpDialler.DialConfig(url, cfg)
+				if err != nil {
+					time.Sleep(c.reconnectInterval)
+					return
+				}
+				isConnAlive = true
+				connErrCh = make(chan *amqp.Error, 1)
+				amqpConn.NotifyClose(connErrCh)
+				if c.logger != nil {
+					c.logger.Info("rabbitmq connection restored")
+				}
+			}()
 		}
 	}
 }
