@@ -17,10 +17,10 @@ type AmqpConn interface {
 	NotifyClose(receiver chan *amqp.Error) chan *amqp.Error
 }
 
-// Connection is a representation of an rmq connection. It has internal
+// Conn is a representation of an rmq connection. It has internal
 // specifications that enable it to be threadsafe and fault tolerant
 // of connection drops.
-type Connection struct {
+type Conn struct {
 	sync.Mutex
 	amqpConn          AmqpConn
 	amqpDialler       AmqpDialler
@@ -53,13 +53,31 @@ type Config struct {
 
 	// CommmitID is listed as the version in the connection.
 	CommitID string
+
+	// RetryForever makes the connection keep trying infinitely
+	// to reconnect.
+	// TODO: provide retry schemes like backoff.
+	RetryForever bool
+}
+
+// Connection specifies the structure for an rmq Connection. It is less than
+// ideal to have here as we would like a unified connection interface
+// for all mqs in this library. However, amqp connections do not
+// implement net.Conn or do something similar. The same seems to be
+// the case with kafka et all.
+// To this end, Connection is a representation of what an rmq.Connection
+// looks like. My utopic vision for this is a higher order mq.Connection
+// one day that would be the abstract any new implementation of mq
+// conforms to.
+type Connection interface {
+	NewChannel() (AmqpChannel, error)
 }
 
 // NewConnection returns a new instance of Connection.
 func NewConnection(
 	url string,
 	cfg Config,
-) (*Connection, error) {
+) (*Conn, error) {
 
 	amqpConfig := amqp.Config{
 		Properties: amqp.Table{
@@ -76,12 +94,13 @@ func NewConnection(
 		return nil, errors.Wrap(err, "error dialing to rmq url")
 	}
 
-	conn := &Connection{
+	conn := &Conn{
 		reconnectInterval: cfg.ReconnectInterval,
 		closeCh:           make(chan struct{}, 1),
 		logger:            cfg.Logger,
 		amqpConn:          amqpConn,
 		amqpDialler:       cfg.AmqpDialler,
+		retryForever:      cfg.RetryForever,
 	}
 
 	go conn.handleConnectionErr(url, amqpConfig)
@@ -90,22 +109,30 @@ func NewConnection(
 
 // Close closes the connection and usually is safe to call multiple times
 // and out of order.
-func (c *Connection) Close() {
+func (c *Conn) Close() {
 	if c.closeCh != nil {
 		close(c.closeCh)
 	}
 	return
 }
 
-// RetryForever keeps indefinitely trying to reconnect in case of failures.
-func (c *Connection) RetryForever() *Connection {
-	c.retryForever = true
-	return c
+// AmqpChannel is an implementation of the functions we need
+// from *amqp.Channel.Its kept minimal on purpose.
+// Feel free to add more on demand.
+type AmqpChannel interface {
+	Consume(queue string,
+		consumer string,
+		autoAck bool,
+		exclusive bool,
+		noLocal bool,
+		noWait bool,
+		args amqp.Table) (<-chan amqp.Delivery, error)
+	Close() error
 }
 
 // NewChannel is an amqp channel wrapped with retrying logic.
 // It is the part that makes this implementation fault tolerant.
-func (c *Connection) NewChannel() (*amqp.Channel, error) {
+func (c *Conn) NewChannel() (AmqpChannel, error) {
 	c.Lock()
 	defer c.Unlock()
 	ch, err := c.amqpConn.Channel()
@@ -124,7 +151,7 @@ func (c *Connection) NewChannel() (*amqp.Channel, error) {
 	return ch, nil
 }
 
-func (c *Connection) handleConnectionErr(url string, cfg amqp.Config) {
+func (c *Conn) handleConnectionErr(url string, cfg amqp.Config) {
 	connErrCh := make(chan *amqp.Error, 1)
 	isConnAlive := true
 	c.amqpConn.NotifyClose(connErrCh)

@@ -68,17 +68,14 @@ func Test_NewChannel(t *testing.T) {
 				AmqpDialler:       fd,
 				ServiceName:       "",
 				CommitID:          "",
+				RetryForever:      testCase.retryForever,
 			})
-			if testCase.retryForever {
-				conn = conn.RetryForever()
-			}
-			ch, err := conn.NewChannel()
+			_, err = conn.NewChannel()
 
 			assert.IsType(testCase.expectedError, err)
 			if err != nil {
 				assert.Equal(testCase.expectedError.Error(), err.Error())
 			}
-			assert.Equal(testCase.channel, ch)
 
 			// ugly yes. But in a real production scenario, this call will
 			// be part of a daemon so it makes sense to add this sleep.
