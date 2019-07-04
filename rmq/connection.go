@@ -127,6 +127,8 @@ type AmqpChannel interface {
 		noLocal bool,
 		noWait bool,
 		args amqp.Table) (<-chan amqp.Delivery, error)
+	Qos(prefetchCount, prefetchSize int, global bool) error
+	NotifyClose(receiver chan *amqp.Error) chan *amqp.Error
 	Close() error
 }
 
@@ -189,4 +191,13 @@ func (c *Conn) handleConnectionErr(url string, cfg amqp.Config) {
 			}()
 		}
 	}
+}
+
+func isAmqpAccessRefusedError(err error) bool {
+	if amqpError, ok := err.(*amqp.Error); ok {
+		if amqpError.Code == amqp.AccessRefused {
+			return true
+		}
+	}
+	return false
 }

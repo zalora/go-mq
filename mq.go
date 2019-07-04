@@ -8,17 +8,20 @@ package mq
 // Requeue is a specification/function that lets the caller put
 // the message back in the queue.
 type Message struct {
-	Type    string
-	Headers map[string]interface{}
-	Body    MessageBody
-	Ack     func() error
+	Type   string
+	Header Header
+	Body   MessageBody
+	Ack    func() error
 	//Requeues the message to its original position ,if possible .
 	//if not,requeues to a position closer to queue head.
 	Requeue func() error
 	Error   error
 }
 
-// MessageBody denotes the contents carries inside a Message.
+// Header represents the key-value pairs in an mq header.
+type Header map[string]interface{}
+
+// MessageBody denotes the contents carried inside a Message.
 type MessageBody map[string]interface{}
 
 // Consumer is a representation of a consumer of queues. Its job
