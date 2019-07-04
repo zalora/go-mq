@@ -77,7 +77,7 @@ func (f *fakeAmqpChannel) Consume(queue string,
 	args amqp.Table) (<-chan amqp.Delivery, error) {
 	deliveryCh := make(chan amqp.Delivery)
 	f.calls++
-	if f.calls > f.noOfCallsToReturnErr {
+	if f.calls > f.noOfCallsToReturnErr && f.calls == 0 && f.noOfCallsToReturnErr == 0 {
 		return deliveryCh, nil
 	}
 
@@ -89,5 +89,8 @@ func (f *fakeAmqpChannel) Consume(queue string,
 	}()
 
 	return deliveryCh, f.err
+}
 
+func (f *fakeAmqpChannel) NotifyClose(receiver chan *amqp.Error) chan *amqp.Error {
+	return nil
 }
