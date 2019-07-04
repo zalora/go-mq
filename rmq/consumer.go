@@ -64,7 +64,11 @@ func (c *Consumer) Consume() (<-chan mq.Message, error) {
 	if c.msgCh == nil {
 		c.msgCh = make(chan mq.Message)
 		c.closeCh = make(chan struct{}, 1)
-		go c.consume()
+		go func() {
+			defer close(c.msgCh)
+			c.consume()
+		}()
+
 		return c.msgCh, nil
 	}
 	return nil, errors.New("queue already being consumed")
@@ -79,7 +83,7 @@ func (c *Consumer) consume() {
 		case <-ticker.C:
 			amqpCh, err := c.conn.NewChannel()
 			if err != nil {
-				c.dispatchError(err)
+				c.dispatchError(errors.Wrap(err, "error creating new channel at consume()"))
 				return
 			}
 			consumeCh, err := amqpCh.Consume(
@@ -95,7 +99,7 @@ func (c *Consumer) consume() {
 				if isAmqpAccessRefusedError(err) {
 					continue
 				}
-				c.dispatchError(err)
+				c.dispatchError(errors.Wrap(err, "error during consume"))
 				return
 			}
 			c.channel = amqpCh
@@ -106,8 +110,7 @@ func (c *Consumer) consume() {
 }
 
 func (c *Consumer) dispatchError(err error) {
-	c.msgCh <- mq.Message{Error: err, Ack: func() error { return nil }}
-	close(c.msgCh)
+	c.msgCh <- mq.Message{Type: "error-rmq", Error: err, Ack: func() error { return nil }}
 	close(c.closeCh)
 }
 
@@ -121,13 +124,16 @@ func (c *Consumer) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
 		case <-errCh:
 			amqpCh, err := c.conn.NewChannel()
 			if err != nil {
-				c.dispatchError(err)
+				c.dispatchError(errors.Wrap(err, "error creating new channel at dispatchMessages()"))
 				return
 			}
 			c.channel = amqpCh
 			go c.consume()
 			return
-		case msg := <-mqDeliveryCh:
+		case msg, ok := <-mqDeliveryCh:
+			if !ok {
+				return
+			}
 			ack := func() error { return msg.Ack(false) }
 			requeue := func() error { return msg.Nack(false, true) }
 			msgBody := map[string]interface{}{}
