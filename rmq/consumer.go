@@ -158,5 +158,9 @@ func (c *Consumer) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
 // Close closes closeCh which makes the select statement in the goroutines
 // stop.
 func (c *Consumer) Close() error {
+	if c.closeCh != nil {
+		close(c.closeCh)
+		return c.channel.Close()
+	}
 	return nil
 }
