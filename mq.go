@@ -12,8 +12,9 @@ type Message struct {
 	Header Header
 	Body   MessageBody
 	Ack    func() error
-	// Requeues the message to its original position ,if possible .
-	// if not,requeues to a position closer to queue head.
+
+	// mq implementations that support a return to queue can go
+	// ahead and use this feature.
 	Requeue func() error
 	Error   error
 }
