@@ -1,18 +1,23 @@
 package mq
 
 // Message is the primary citizen of mq. It is the m in the mq.
-// Type is usually an identifier for the type of message/topic.
-// Headers are like the http/tcp headers and can carry information
-// about the message itself.
-// Ack while self explanatory can also be a destructor(like sqs delete).
-// Requeue is a specification/function that lets the caller put
-// the message back in the queue.
 type Message struct {
-	Type   string
-	Header Header
-	Body   MessageBody
-	Ack    func() error
+	// Type is usually an identifier for the type of message/topic.
+	Type string
 
+	// Headers are like the http/tcp headers and can carry information
+	// about the message itself.
+	Header Header
+
+	// Body is a map[string]interface{} specifically to force users
+	// to name the content.
+	Body MessageBody
+
+	// Ack while self explanatory can also be a destructor(like sqs delete).
+	Ack func() error
+
+	// Requeue is a specification/function that lets the caller put
+	// the message back in the queue.
 	// mq implementations that support a return to queue can go
 	// ahead and use this feature.
 	Requeue func() error
