@@ -174,14 +174,15 @@ func (c *Conn) handleConnectionErr(url string, cfg amqp.Config) {
 			func() {
 				c.Lock()
 				defer c.Unlock()
-				amqpConn, err := c.amqpDialler.DialConfig(url, cfg)
+				var err error
+				c.amqpConn, err = c.amqpDialler.DialConfig(url, cfg)
 				if err != nil {
 					time.Sleep(c.reconnectInterval)
 					return
 				}
 				isConnAlive = true
 				connErrCh = make(chan *amqp.Error, 1)
-				amqpConn.NotifyClose(connErrCh)
+				c.amqpConn.NotifyClose(connErrCh)
 				if c.logger != nil {
 					c.logger.Info("rabbitmq connection restored")
 				}
