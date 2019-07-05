@@ -66,6 +66,7 @@ type fakeAmqpChannel struct {
 	calls                int
 	noOfCallsToReturnErr int
 	err                  error
+	notifyErr            *amqp.Error
 }
 
 func (f *fakeAmqpChannel) Consume(queue string,
@@ -91,6 +92,13 @@ func (f *fakeAmqpChannel) Consume(queue string,
 	return deliveryCh, f.err
 }
 
+func (f *fakeAmqpChannel) Close() error {
+	return nil
+}
+
 func (f *fakeAmqpChannel) NotifyClose(receiver chan *amqp.Error) chan *amqp.Error {
+	if f.notifyErr != nil {
+		receiver <- f.notifyErr
+	}
 	return nil
 }
