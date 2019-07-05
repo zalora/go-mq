@@ -25,7 +25,7 @@ func main() {
 		log.Fatal(err, "error making new rmq connection")
 	}
 
-	consumer, err := rmq.NewConsumer("go-mq-test",
+	subscriber, err := rmq.NewSubscriber("go-mq-test",
 		false,
 		connection,
 		2*time.Second)
@@ -34,7 +34,7 @@ func main() {
 		log.Fatal(err, "error creating new consumer")
 	}
 
-	messageCh, err := consumer.Consume()
+	messageCh, err := subscriber.Subscribe()
 	if err != nil {
 		log.Fatal(err, "error calling consume()")
 	}

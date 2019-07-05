@@ -30,10 +30,10 @@ type Header map[string]interface{}
 // MessageBody denotes the contents carried inside a Message.
 type MessageBody map[string]interface{}
 
-// Consumer is a representation of a consumer of queues. Its job
+// Subscriber is a representation of a consumer of queues. Its job
 // is to return messages (order depends on the type of mq implemented).
-type Consumer interface {
-	Consume() (<-chan Message, error)
+type Subscriber interface {
+	Subscribe() (<-chan Message, error)
 	Close() error
 }
 

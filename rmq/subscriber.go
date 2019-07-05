@@ -11,9 +11,8 @@ import (
 	"github.com/zalora/go-mq"
 )
 
-// Consumer is a rmq specific type that implements
-// mq.Consumer.
-type Consumer struct {
+// Subscriber is a rmq specific type that implements mq.Subscriber.
+type Subscriber struct {
 	channel       AmqpChannel
 	queueName     string
 	exclusive     bool
@@ -26,26 +25,29 @@ type Consumer struct {
 	unmarshaler json.Unmarshaler
 }
 
-// NewConsumer returns a new instance of Consumer that
-// can be used as an mq.Consumer.
-// queueName is the queue the consumer is listening to/
-// consuming from.
-// exclusive would make the consumer lock the  channel
-// its listening to and not let any other consumer connect.
-// conn is an rmq.Connection that the client has to initiate
-// and supply.
+// NewSubscriber returns a new instance of Subscriber that can be used as an
+// mq.Subscriber.
+//
+// parameters:
+// queueName is the queue the Subscriber is listening to/consuming from.
+//
+// exclusive would make the Subscriber lock the  channel its listening to
+// and not let any other Subscriber connect.
+//
+// conn is an rmq.Connection that the client has to initiate and supply.
+//
 // Sending a retryInterval of 0 is akin to disabling retry.
-func NewConsumer(queueName string,
+func NewSubscriber(queueName string,
 	exclusive bool,
 	conn Connection,
-	retryInterval time.Duration) (*Consumer, error) {
+	retryInterval time.Duration) (*Subscriber, error) {
 
 	ch, err := conn.NewChannel()
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating/acquiring new rmq channel")
 	}
 
-	return &Consumer{
+	return &Subscriber{
 		channel:       ch,
 		queueName:     queueName,
 		exclusive:     exclusive,
@@ -55,42 +57,43 @@ func NewConsumer(queueName string,
 }
 
 //QoS is a thin wrapper on amqp's Qos
-func (c *Consumer) QoS(prefetchCount, prefetchSize int, global bool) error {
-	return c.channel.Qos(prefetchCount, prefetchSize, global)
+func (s *Subscriber) QoS(prefetchCount, prefetchSize int, global bool) error {
+	return s.channel.Qos(prefetchCount, prefetchSize, global)
 }
 
-// Consume implements mq.Consumer's Consume() method.
-func (c *Consumer) Consume() (<-chan mq.Message, error) {
-	if c.msgCh == nil {
-		c.msgCh = make(chan mq.Message)
-		c.closeCh = make(chan struct{}, 1)
+// Subscribe implements mq.Subscriber's Subscribe() method.
+func (s *Subscriber) Subscribe() (<-chan mq.Message, error) {
+	if s.msgCh == nil {
+		s.msgCh = make(chan mq.Message)
+		s.closeCh = make(chan struct{}, 1)
 		go func() {
-			defer close(c.msgCh)
-			c.consume()
+			defer close(s.msgCh)
+			s.consume()
 		}()
 
-		return c.msgCh, nil
+		return s.msgCh, nil
 	}
 	return nil, errors.New("queue already being consumed")
 }
 
-func (c *Consumer) consume() {
-	ticker := impetus.NewImmediateTicker(c.retryInterval)
+// consume is an amqp term for subscribe. Well... sort of.
+func (s *Subscriber) consume() {
+	ticker := impetus.NewImmediateTicker(s.retryInterval)
 	for {
 		select {
-		case <-c.closeCh:
+		case <-s.closeCh:
 			return
 		case <-ticker.C:
-			amqpCh, err := c.conn.NewChannel()
+			amqpCh, err := s.conn.NewChannel()
 			if err != nil {
-				c.dispatchError(errors.Wrap(err, "error creating new channel at consume()"))
+				s.dispatchError(errors.Wrap(err, "error creating new channel at consume()"))
 				return
 			}
 			consumeCh, err := amqpCh.Consume(
-				c.queueName,
+				s.queueName,
 				"",
 				false,
-				c.exclusive,
+				s.exclusive,
 				false,
 				false,
 				nil,
@@ -99,37 +102,37 @@ func (c *Consumer) consume() {
 				if isAmqpAccessRefusedError(err) {
 					continue
 				}
-				c.dispatchError(errors.Wrap(err, "error during consume"))
+				s.dispatchError(errors.Wrap(err, "error during consume"))
 				return
 			}
-			c.channel = amqpCh
-			c.dispatchMessages(consumeCh)
+			s.channel = amqpCh
+			s.dispatchMessages(consumeCh)
 			return
 		}
 	}
 }
 
-func (c *Consumer) dispatchError(err error) {
-	c.msgCh <- mq.Message{Type: "error-rmq", Error: err, Ack: func() error { return nil }}
-	close(c.closeCh)
-	c.closeCh = nil
+func (s *Subscriber) dispatchError(err error) {
+	s.msgCh <- mq.Message{Type: "error-rmq", Error: err, Ack: func() error { return nil }}
+	close(s.closeCh)
+	s.closeCh = nil
 }
 
-func (c *Consumer) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
+func (s *Subscriber) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
 	errCh := make(chan *amqp.Error, 1)
-	c.channel.NotifyClose(errCh)
+	s.channel.NotifyClose(errCh)
 	for {
 		select {
-		case <-c.closeCh:
+		case <-s.closeCh:
 			return
 		case <-errCh:
-			amqpCh, err := c.conn.NewChannel()
+			amqpCh, err := s.conn.NewChannel()
 			if err != nil {
-				c.dispatchError(errors.Wrap(err, "error creating new channel at dispatchMessages()"))
+				s.dispatchError(errors.Wrap(err, "error creating new channel at dispatchMessages()"))
 				return
 			}
-			c.channel = amqpCh
-			go c.consume()
+			s.channel = amqpCh
+			go s.consume()
 			return
 		case msg, ok := <-mqDeliveryCh:
 			if !ok {
@@ -146,7 +149,7 @@ func (c *Consumer) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
 						Error: errorWithBody,
 						Ack:   func() error { return nil },
 					}
-					c.msgCh <- errMsg
+					s.msgCh <- errMsg
 					continue
 				}
 			}
@@ -157,17 +160,17 @@ func (c *Consumer) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
 				Requeue: requeue,
 				Header:  headers,
 				Type:    msg.RoutingKey}
-			c.msgCh <- finalMsg
+			s.msgCh <- finalMsg
 		}
 	}
 }
 
 // Close closes closeCh which makes the select statement in the goroutines
 // stop.
-func (c *Consumer) Close() error {
-	if c.closeCh != nil {
-		close(c.closeCh)
-		return c.channel.Close()
+func (s *Subscriber) Close() error {
+	if s.closeCh != nil {
+		close(s.closeCh)
+		return s.channel.Close()
 	}
 	return nil
 }

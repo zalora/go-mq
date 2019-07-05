@@ -54,8 +54,7 @@ type Config struct {
 	// CommmitID is listed as the version in the connection.
 	CommitID string
 
-	// RetryForever makes the connection keep trying infinitely
-	// to reconnect.
+	// RetryForever makes the connection keep trying infinitely to reconnect.
 	// TODO: provide retry schemes like backoff.
 	RetryForever bool
 }
@@ -67,8 +66,7 @@ type Config struct {
 // the case with kafka et all.
 // To this end, Connection is a representation of what an rmq.Connection
 // looks like. My utopic vision for this is a higher order mq.Connection
-// one day that would be the abstract any new implementation of mq
-// conforms to.
+// one day that would be the abstract any new implementation of mq conforms to.
 type Connection interface {
 	NewChannel() (AmqpChannel, error)
 }
@@ -116,9 +114,8 @@ func (c *Conn) Close() {
 	return
 }
 
-// AmqpChannel is an implementation of the functions we need
-// from *amqp.Channel.Its kept minimal on purpose.
-// Feel free to add more on demand.
+// AmqpChannel is an implementation of the functions we need from
+// *amqp.Channel.Its kept minimal on purpose. Feel free to add more on demand.
 type AmqpChannel interface {
 	Consume(queue string,
 		consumer string,
@@ -140,7 +137,7 @@ func (c *Conn) NewChannel() (AmqpChannel, error) {
 	ch, err := c.amqpConn.Channel()
 	if err != nil {
 		for {
-			time.Sleep(2 * c.reconnectInterval)
+			time.Sleep(c.reconnectInterval)
 			ch, err := c.amqpConn.Channel()
 			if err == nil {
 				return ch, nil

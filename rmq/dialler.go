@@ -2,8 +2,7 @@ package rmq
 
 import "github.com/streadway/amqp"
 
-// AmqpDialler is a abstraction of a dial function to obtain
-// AmqpConn.
+// AmqpDialler is a abstraction of a dial function to obtain AmqpConn.
 type AmqpDialler interface {
 	// The amqp.Config is non negotiable here as this interface
 	// has to adhere to streadway/amqp standards and not the

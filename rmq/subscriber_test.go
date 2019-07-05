@@ -12,7 +12,7 @@ import (
 	"github.com/zalora/go-mq"
 )
 
-func Test_Consume(t *testing.T) {
+func Test_Subscribe(t *testing.T) {
 	var testCases = []struct {
 		desc             string
 		retryInterval    time.Duration
@@ -100,10 +100,10 @@ func Test_Consume(t *testing.T) {
 			fakeConn := &fakeConnection{
 				fakeAmqpChannel: fakeCh,
 			}
-			consumer, err := NewConsumer("", true, fakeConn, testCase.retryInterval)
+			subscriber, err := NewSubscriber("", true, fakeConn, testCase.retryInterval)
 			assert.Nil(err)
 
-			messageCh, err := consumer.Consume()
+			messageCh, err := subscriber.Subscribe()
 			assert.Nil(err)
 
 			var i int
@@ -118,7 +118,7 @@ func Test_Consume(t *testing.T) {
 				}
 				i++
 			}
-			consumer.Close()
+			subscriber.Close()
 		})
 	}
 }
