@@ -112,6 +112,7 @@ func (c *Consumer) consume() {
 func (c *Consumer) dispatchError(err error) {
 	c.msgCh <- mq.Message{Type: "error-rmq", Error: err, Ack: func() error { return nil }}
 	close(c.closeCh)
+	c.closeCh = nil
 }
 
 func (c *Consumer) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
@@ -140,7 +141,7 @@ func (c *Consumer) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
 			if len(msg.Body) != 0 {
 				if err := json.Unmarshal(msg.Body, &msgBody); err != nil {
 					ack()
-					errorWithBody := fmt.Errorf("%s: %s", err, string(msg.Body))
+					errorWithBody := fmt.Errorf("invalid message format: %s: %s", err, string(msg.Body))
 					errMsg := mq.Message{
 						Error: errorWithBody,
 						Ack:   func() error { return nil },
