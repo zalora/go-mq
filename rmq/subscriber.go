@@ -19,10 +19,9 @@ type Subscriber struct {
 	conn          Connection
 	retryInterval time.Duration
 
-	msgCh       chan mq.Message
-	closeCh     chan struct{}
-	logger      mq.Logger
-	unmarshaler json.Unmarshaler
+	msgCh   chan mq.Message
+	closeCh chan struct{}
+	logger  mq.Logger
 }
 
 // NewSubscriber returns a new instance of Subscriber that can be used as an
