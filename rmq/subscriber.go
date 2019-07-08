@@ -31,12 +31,12 @@ type Subscriber struct {
 // parameters:
 // queueName is the queue the Subscriber is listening to/consuming from.
 //
-// exclusive would make the Subscriber lock the  channel its listening to
+// exclusive would make the Subscriber lock the channel its listening to
 // and not let any other Subscriber connect.
 //
 // conn is an rmq.Connection that the client has to initiate and supply.
 //
-// Sending a retryInterval of 0 is akin to disabling retry.
+// Sending a retryInterval of 0 disables retrying
 func NewSubscriber(queueName string,
 	exclusive bool,
 	conn Connection,
@@ -84,6 +84,8 @@ func (s *Subscriber) consume() {
 		case <-s.closeCh:
 			return
 		case <-ticker.C:
+			// Channels in rabbitmq/amqp are irrecoverable on most failures.
+			// So we create new channels for retries after failure.
 			amqpCh, err := s.conn.NewChannel()
 			if err != nil {
 				s.dispatchError(errors.Wrap(err, "error creating new channel at consume()"))
@@ -138,12 +140,12 @@ func (s *Subscriber) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
 			if !ok {
 				return
 			}
-			ack := func() error { return msg.Ack(false) }
-			requeue := func() error { return msg.Nack(false, true) }
+			noAck := func() error { return msg.Ack(false) }
+			noRequeue := func() error { return msg.Nack(false, true) }
 			msgBody := map[string]interface{}{}
 			if len(msg.Body) != 0 {
 				if err := json.Unmarshal(msg.Body, &msgBody); err != nil {
-					ack()
+					noAck()
 					errorWithBody := fmt.Errorf("invalid message format: %s: %s", err, string(msg.Body))
 					errMsg := mq.Message{
 						Error: errorWithBody,
@@ -156,8 +158,8 @@ func (s *Subscriber) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
 			headers := map[string]interface{}(msg.Headers)
 			finalMsg := mq.Message{
 				Body:    msgBody,
-				Ack:     ack,
-				Requeue: requeue,
+				Ack:     noAck,
+				Requeue: noRequeue,
 				Header:  headers,
 				Type:    msg.RoutingKey}
 			s.msgCh <- finalMsg
@@ -165,8 +167,7 @@ func (s *Subscriber) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
 	}
 }
 
-// Close closes closeCh which makes the select statement in the goroutines
-// stop.
+// Close closes closeCh which makes the select statement in the goroutines stop.
 func (s *Subscriber) Close() error {
 	if s.closeCh != nil {
 		close(s.closeCh)

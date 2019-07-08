@@ -65,8 +65,9 @@ type Config struct {
 // implement net.Conn or do something similar. The same seems to be
 // the case with kafka et all.
 // To this end, Connection is a representation of what an rmq.Connection
-// looks like. My utopic vision for this is a higher order mq.Connection
-// one day that would be the abstract any new implementation of mq conforms to.
+// looks like.
+// Longterm TODO: vision for this is a higher order mq.Connection one day that would
+// be the abstract any new implementation of mq conforms to.
 type Connection interface {
 	NewChannel() (AmqpChannel, error)
 }
