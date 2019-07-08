@@ -25,6 +25,7 @@ func main() {
 		log.Fatal(err, "error making new rmq connection")
 	}
 
+	log.Println("connected. creating new subscriber")
 	subscriber, err := rmq.NewSubscriber("go-mq-test",
 		false,
 		connection,
@@ -34,11 +35,13 @@ func main() {
 		log.Fatal(err, "error creating new consumer")
 	}
 
+	log.Println("subscribing")
 	messageCh, err := subscriber.Subscribe()
 	if err != nil {
 		log.Fatal(err, "error calling consume()")
 	}
 
+	log.Println("listening for messages")
 	for message := range messageCh {
 		fmt.Println(message)
 		message.Ack()
