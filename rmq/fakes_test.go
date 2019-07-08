@@ -43,3 +43,62 @@ type fakeDialler struct {
 func (f *fakeDialler) DialConfig(url string, config amqp.Config) (AmqpConn, error) {
 	return f.amqpConn, nil
 }
+
+type fakeConnection struct {
+	Connection
+	fakeAmqpChannel      AmqpChannel
+	calls                int
+	noOfCallsToReturnErr int
+	err                  error
+}
+
+func (f *fakeConnection) NewChannel() (AmqpChannel, error) {
+	f.calls++
+	if f.calls > f.noOfCallsToReturnErr {
+		return f.fakeAmqpChannel, nil
+	}
+	return f.fakeAmqpChannel, f.err
+}
+
+type fakeAmqpChannel struct {
+	AmqpChannel
+	deliveryList         []amqp.Delivery
+	calls                int
+	noOfCallsToReturnErr int
+	err                  error
+	notifyErr            *amqp.Error
+}
+
+func (f *fakeAmqpChannel) Consume(queue string,
+	consumer string,
+	autoAck bool,
+	exclusive bool,
+	noLocal bool,
+	noWait bool,
+	args amqp.Table) (<-chan amqp.Delivery, error) {
+	deliveryCh := make(chan amqp.Delivery)
+	f.calls++
+	if f.calls > f.noOfCallsToReturnErr && f.calls == 0 && f.noOfCallsToReturnErr == 0 {
+		return deliveryCh, nil
+	}
+
+	go func() {
+		defer close(deliveryCh)
+		for _, delivery := range f.deliveryList {
+			deliveryCh <- delivery
+		}
+	}()
+
+	return deliveryCh, f.err
+}
+
+func (f *fakeAmqpChannel) Close() error {
+	return nil
+}
+
+func (f *fakeAmqpChannel) NotifyClose(receiver chan *amqp.Error) chan *amqp.Error {
+	if f.notifyErr != nil {
+		receiver <- f.notifyErr
+	}
+	return nil
+}

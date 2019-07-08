@@ -54,8 +54,7 @@ type Config struct {
 	// CommmitID is listed as the version in the connection.
 	CommitID string
 
-	// RetryForever makes the connection keep trying infinitely
-	// to reconnect.
+	// RetryForever makes the connection keep trying infinitely to reconnect.
 	// TODO: provide retry schemes like backoff.
 	RetryForever bool
 }
@@ -66,9 +65,9 @@ type Config struct {
 // implement net.Conn or do something similar. The same seems to be
 // the case with kafka et all.
 // To this end, Connection is a representation of what an rmq.Connection
-// looks like. My utopic vision for this is a higher order mq.Connection
-// one day that would be the abstract any new implementation of mq
-// conforms to.
+// looks like.
+// Longterm TODO: vision for this is a higher order mq.Connection one day that would
+// be the abstract any new implementation of mq conforms to.
 type Connection interface {
 	NewChannel() (AmqpChannel, error)
 }
@@ -116,9 +115,8 @@ func (c *Conn) Close() {
 	return
 }
 
-// AmqpChannel is an implementation of the functions we need
-// from *amqp.Channel.Its kept minimal on purpose.
-// Feel free to add more on demand.
+// AmqpChannel is an implementation of the functions we need from
+// *amqp.Channel.Its kept minimal on purpose. Feel free to add more on demand.
 type AmqpChannel interface {
 	Consume(queue string,
 		consumer string,
@@ -127,6 +125,8 @@ type AmqpChannel interface {
 		noLocal bool,
 		noWait bool,
 		args amqp.Table) (<-chan amqp.Delivery, error)
+	Qos(prefetchCount, prefetchSize int, global bool) error
+	NotifyClose(receiver chan *amqp.Error) chan *amqp.Error
 	Close() error
 }
 
@@ -138,7 +138,7 @@ func (c *Conn) NewChannel() (AmqpChannel, error) {
 	ch, err := c.amqpConn.Channel()
 	if err != nil {
 		for {
-			time.Sleep(2 * c.reconnectInterval)
+			time.Sleep(c.reconnectInterval)
 			ch, err := c.amqpConn.Channel()
 			if err == nil {
 				return ch, nil
@@ -175,18 +175,28 @@ func (c *Conn) handleConnectionErr(url string, cfg amqp.Config) {
 			func() {
 				c.Lock()
 				defer c.Unlock()
-				amqpConn, err := c.amqpDialler.DialConfig(url, cfg)
+				var err error
+				c.amqpConn, err = c.amqpDialler.DialConfig(url, cfg)
 				if err != nil {
 					time.Sleep(c.reconnectInterval)
 					return
 				}
 				isConnAlive = true
 				connErrCh = make(chan *amqp.Error, 1)
-				amqpConn.NotifyClose(connErrCh)
+				c.amqpConn.NotifyClose(connErrCh)
 				if c.logger != nil {
 					c.logger.Info("rabbitmq connection restored")
 				}
 			}()
 		}
 	}
+}
+
+func isAmqpAccessRefusedError(err error) bool {
+	if amqpError, ok := err.(*amqp.Error); ok {
+		if amqpError.Code == amqp.AccessRefused {
+			return true
+		}
+	}
+	return false
 }

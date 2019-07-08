@@ -19,17 +19,32 @@ func main() {
 			AmqpDialler:       nil,
 			ServiceName:       "",
 			CommitID:          "",
+			RetryForever:      true,
 		})
 	if err != nil {
-		log.Fatal(err, "error making new rmq connection")
+		log.Fatal("error making new rmq connection:", err)
 	}
 
-	log.Println("opening new channel")
-	ch, err := connection.NewChannel()
+	log.Println("connected. creating new subscriber")
+	subscriber, err := rmq.NewSubscriber("go-mq-test",
+		false,
+		connection,
+		2*time.Second)
+
 	if err != nil {
-		log.Fatal(err, "error connecting to new channel")
+		log.Fatal("error creating new consumer:", err)
 	}
 
-	fmt.Println(ch)
-	time.Sleep(10 * time.Second)
+	log.Println("subscribing")
+	messageCh, err := subscriber.Subscribe()
+	if err != nil {
+		log.Fatal("error calling consume():", err)
+	}
+
+	log.Println("listening for messages")
+	for message := range messageCh {
+		fmt.Println(message)
+		message.Ack()
+	}
+
 }

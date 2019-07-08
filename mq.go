@@ -1,30 +1,39 @@
 package mq
 
 // Message is the primary citizen of mq. It is the m in the mq.
-// Type is usually an identifier for the type of message/topic.
-// Headers are like the http/tcp headers and can carry information
-// about the message itself.
-// Ack while self explanatory can also be a destructor(like sqs delete).
-// Requeue is a specification/function that lets the caller put
-// the message back in the queue.
 type Message struct {
-	Type    string
-	Headers map[string]interface{}
-	Body    MessageBody
-	Ack     func() error
-	//Requeues the message to its original position ,if possible .
-	//if not,requeues to a position closer to queue head.
+	// Type is usually an identifier for the type of message/topic.
+	Type string
+
+	// Headers are like the http/tcp headers and can carry information
+	// about the message itself.
+	Header Header
+
+	// Body is a map[string]interface{} specifically to force users
+	// to name the content.
+	Body MessageBody
+
+	// Ack while self explanatory can also be a destructor(like sqs delete).
+	Ack func() error
+
+	// Requeue is a specification/function that lets the caller put
+	// the message back in the queue.
+	// mq implementations that support a return to queue can go
+	// ahead and use this feature.
 	Requeue func() error
 	Error   error
 }
 
-// MessageBody denotes the contents carries inside a Message.
+// Header represents the key-value pairs in an mq header.
+type Header map[string]interface{}
+
+// MessageBody denotes the contents carried inside a Message.
 type MessageBody map[string]interface{}
 
-// Consumer is a representation of a consumer of queues. Its job
+// Subscriber is a representation of a consumer of queues. Its job
 // is to return messages (order depends on the type of mq implemented).
-type Consumer interface {
-	Consume() (<-chan Message, error)
+type Subscriber interface {
+	Subscribe() (<-chan Message, error)
 	Close() error
 }
 
