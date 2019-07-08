@@ -140,12 +140,12 @@ func (s *Subscriber) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
 			if !ok {
 				return
 			}
-			noAck := func() error { return msg.Ack(false) }
-			noRequeue := func() error { return msg.Nack(false, true) }
+			ack := func() error { return msg.Ack(false) }
+			requeue := func() error { return msg.Nack(false, true) }
 			msgBody := map[string]interface{}{}
 			if len(msg.Body) != 0 {
 				if err := json.Unmarshal(msg.Body, &msgBody); err != nil {
-					noAck()
+					ack()
 					errorWithBody := fmt.Errorf("invalid message format: %s: %s", err, string(msg.Body))
 					errMsg := mq.Message{
 						Error: errorWithBody,
@@ -158,8 +158,8 @@ func (s *Subscriber) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
 			headers := map[string]interface{}(msg.Headers)
 			finalMsg := mq.Message{
 				Body:    msgBody,
-				Ack:     noAck,
-				Requeue: noRequeue,
+				Ack:     ack,
+				Requeue: requeue,
 				Header:  headers,
 				Type:    msg.RoutingKey}
 			s.msgCh <- finalMsg
