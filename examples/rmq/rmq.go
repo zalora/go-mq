@@ -22,7 +22,7 @@ func main() {
 			RetryForever:      true,
 		})
 	if err != nil {
-		log.Fatal(err, "error making new rmq connection")
+		log.Fatal("error making new rmq connection:", err)
 	}
 
 	log.Println("connected. creating new subscriber")
@@ -32,13 +32,13 @@ func main() {
 		2*time.Second)
 
 	if err != nil {
-		log.Fatal(err, "error creating new consumer")
+		log.Fatal("error creating new consumer:", err)
 	}
 
 	log.Println("subscribing")
 	messageCh, err := subscriber.Subscribe()
 	if err != nil {
-		log.Fatal(err, "error calling consume()")
+		log.Fatal("error calling consume():", err)
 	}
 
 	log.Println("listening for messages")
