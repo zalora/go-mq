@@ -9,9 +9,8 @@ type Message struct {
 	// about the message itself.
 	Header Header
 
-	// Body is a map[string]interface{} specifically to force users
-	// to name the content.
-	Body MessageBody
+	// Body is the actual body of the message.
+	Body []byte
 
 	// Ack while self explanatory can also be a destructor(like sqs delete).
 	Ack func() error
@@ -26,9 +25,6 @@ type Message struct {
 
 // Header represents the key-value pairs in an mq header.
 type Header map[string]interface{}
-
-// MessageBody denotes the contents carried inside a Message.
-type MessageBody map[string]interface{}
 
 // Subscriber is a representation of a consumer of queues. Its job
 // is to return messages (order depends on the type of mq implemented).

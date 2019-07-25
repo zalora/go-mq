@@ -1,8 +1,6 @@
 package rmq
 
 import (
-	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -141,22 +139,9 @@ func (s *Subscriber) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
 			}
 			ack := func() error { return msg.Ack(false) }
 			requeue := func() error { return msg.Nack(false, true) }
-			msgBody := map[string]interface{}{}
-			if len(msg.Body) != 0 {
-				if err := json.Unmarshal(msg.Body, &msgBody); err != nil {
-					ack()
-					errorWithBody := fmt.Errorf("invalid message format: %s: %s", err, string(msg.Body))
-					errMsg := mq.Message{
-						Error: errorWithBody,
-						Ack:   func() error { return nil },
-					}
-					s.msgCh <- errMsg
-					continue
-				}
-			}
 			headers := map[string]interface{}(msg.Headers)
 			finalMsg := mq.Message{
-				Body:    msgBody,
+				Body:    msg.Body,
 				Ack:     ack,
 				Requeue: requeue,
 				Header:  headers,

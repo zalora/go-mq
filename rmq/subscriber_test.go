@@ -35,7 +35,7 @@ func Test_Subscribe(t *testing.T) {
 				mq.Message{
 					Type:   "test.event",
 					Header: map[string]interface{}{"some_random_header": "random_header_value"},
-					Body:   map[string]interface{}{"body": "lots of content"},
+					Body:   []byte(`{"body": "lots of content"}`),
 				},
 			},
 		},
@@ -47,21 +47,6 @@ func Test_Subscribe(t *testing.T) {
 				mq.Message{
 					Type:  "error-rmq",
 					Error: pkgerrors.Wrap(errors.New("consume error"), "error during consume"),
-				},
-			},
-		},
-		{
-			desc:          "only json formatted body is supported by the default unmarshaler",
-			retryInterval: 1 * time.Second,
-			amqpDeliveryList: []amqp.Delivery{
-				amqp.Delivery{
-					RoutingKey: "test.event",
-					Body:       []byte("this is not a json"),
-				},
-			},
-			expectedMessages: []mq.Message{
-				mq.Message{
-					Error: pkgerrors.New("invalid message format: invalid character 'h' in literal true (expecting 'r'): this is not a json"),
 				},
 			},
 		},
@@ -79,7 +64,7 @@ func Test_Subscribe(t *testing.T) {
 				mq.Message{
 					Type:   "test.event",
 					Header: map[string]interface{}{"some_random_header": "random_header_value"},
-					Body:   map[string]interface{}{"body": "lots of content"},
+					Body:   []byte(`{"body": "lots of content"}`),
 				},
 			},
 			notifyErr: &amqp.Error{
