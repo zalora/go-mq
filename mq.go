@@ -20,7 +20,11 @@ type Message struct {
 	// mq implementations that support a return to queue can go
 	// ahead and use this feature.
 	Requeue func() error
-	Error   error
+
+	// Deadletter is a specification/function that lets the caller put
+	// the message in a deadletter queue.
+	Deadletter func() error
+	Error      error
 }
 
 // Header represents the key-value pairs in an mq header.

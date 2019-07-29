@@ -139,13 +139,15 @@ func (s *Subscriber) dispatchMessages(mqDeliveryCh <-chan amqp.Delivery) {
 			}
 			ack := func() error { return msg.Ack(false) }
 			requeue := func() error { return msg.Nack(false, true) }
+			deadletter := func() error { return msg.Nack(false, false) }
 			headers := map[string]interface{}(msg.Headers)
 			finalMsg := mq.Message{
-				Body:    msg.Body,
-				Ack:     ack,
-				Requeue: requeue,
-				Header:  headers,
-				Type:    msg.RoutingKey}
+				Body:       msg.Body,
+				Ack:        ack,
+				Requeue:    requeue,
+				Deadletter: deadletter,
+				Header:     headers,
+				Type:       msg.RoutingKey}
 			s.msgCh <- finalMsg
 		}
 	}
