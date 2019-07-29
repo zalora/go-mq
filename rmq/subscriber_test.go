@@ -95,6 +95,7 @@ func Test_Subscribe(t *testing.T) {
 			for message := range messageCh {
 				message.Ack = nil
 				message.Requeue = nil
+				message.Deadletter = nil
 				if testCase.expectedMessages[i].Error != nil {
 					assert.EqualError(message.Error, testCase.expectedMessages[i].Error.Error())
 				} else {
