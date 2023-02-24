@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/pkg/errors v0.9.1
-	github.com/streadway/amqp v1.0.0
+	github.com/rabbitmq/amqp091-go v1.7.0
 	github.com/stretchr/testify v1.8.1
 	github.com/sudarshan-reddy/impetus v0.0.0-20190319085738-51d4e78bc0a1
 )

@@ -1,14 +1,14 @@
 package rmq
 
 import (
+	"errors"
 	"testing"
 	"time"
 
-	"errors"
-
 	pkgerrors "github.com/pkg/errors"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
+
 	"github.com/zalora/go-mq"
 )
 
