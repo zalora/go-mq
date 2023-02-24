@@ -1,0 +1,21 @@
+# github.com/davecgh/go-spew v1.1.1
+## explicit
+github.com/davecgh/go-spew/spew
+# github.com/pkg/errors v0.9.1
+## explicit
+github.com/pkg/errors
+# github.com/pmezard/go-difflib v1.0.0
+## explicit
+github.com/pmezard/go-difflib/difflib
+# github.com/rabbitmq/amqp091-go v1.7.0
+## explicit; go 1.16
+github.com/rabbitmq/amqp091-go
+# github.com/stretchr/testify v1.8.1
+## explicit; go 1.13
+github.com/stretchr/testify/assert
+# github.com/sudarshan-reddy/impetus v0.0.0-20190319085738-51d4e78bc0a1
+## explicit
+github.com/sudarshan-reddy/impetus
+# gopkg.in/yaml.v3 v3.0.1
+## explicit
+gopkg.in/yaml.v3
