@@ -1,6 +1,8 @@
 package rmq
 
-import amqp "github.com/rabbitmq/amqp091-go"
+import (
+	amqp "github.com/rabbitmq/amqp091-go"
+)
 
 // AmqpDialler is a abstraction of a dial function to obtain AmqpConn.
 type AmqpDialler interface {

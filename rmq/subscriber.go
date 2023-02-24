@@ -54,7 +54,7 @@ func NewSubscriber(queueName string,
 	}, nil
 }
 
-//QoS is a thin wrapper on amqp's Qos
+// QoS is a thin wrapper on amqp's Qos
 func (s *Subscriber) QoS(prefetchCount, prefetchSize int, global bool) error {
 	return s.channel.Qos(prefetchCount, prefetchSize, global)
 }
