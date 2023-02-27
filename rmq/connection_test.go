@@ -70,6 +70,8 @@ func Test_NewChannel(t *testing.T) {
 				CommitID:          "",
 				RetryForever:      testCase.retryForever,
 			})
+			assert.NoError(err)
+
 			_, err = conn.NewChannel()
 
 			assert.IsType(testCase.expectedError, err)

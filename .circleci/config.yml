@@ -1,0 +1,96 @@
+version: 2.1
+
+parameters:
+  # This is the Go version of the CircleCI image.
+  #
+  golang-version:
+    type: string
+    default: "1.20"
+
+  # This is the golangci-lint version we use.
+  #
+  # Take a look at the official docs to check if there is a newer version
+  # available:
+  #
+  # https://golangci-lint.run/usage/install/#other-ci
+  # https://github.com/golangci/golangci-lint/releases
+  #
+  golangci-lint-version:
+    type: string
+    default: "v1.51.2"
+
+jobs:
+  test:
+    docker:
+      - image: cimg/go:<< pipeline.parameters.golang-version >>
+
+    steps:
+      - checkout
+      - run:
+          name: Run tests
+          command: go test -mod=vendor -race ./...
+
+  checks:
+    docker:
+      - image: cimg/go:<< pipeline.parameters.golang-version >>
+
+    steps:
+      - checkout
+
+      - run:
+          name: Check gofmt
+          command: |
+            files=$(go fmt -mod=vendor ./...)
+            [ -z "$files" ] && exit 0
+            
+            echo "Files not formatted:"
+            echo
+            for f in $files; do
+                echo "  $f"
+            done
+            
+            exit 1
+      
+            - restore_cache:
+          key: golangci-lint-<< pipeline.parameters.golangci-lint-version >>
+
+      - run:
+          name: Install golangci-lint
+          command: |
+            BIN_DIR=$(go env GOPATH)/bin
+
+            if [ ! -f "${BIN_DIR}/golangci-lint" ]; then
+                echo "golangci-lint << pipeline.parameters.golangci-lint-version >> not installed yet"
+                curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ${BIN_DIR} << pipeline.parameters.golangci-lint-version >>
+            fi
+
+      - save_cache:
+          key: golangci-lint-<< pipeline.parameters.golangci-lint-version >>
+          paths:
+            - "/home/circleci/go/bin/golangci-lint"
+
+      - run:
+          name: Run golangci-lint
+          no_output_timeout: 10m
+          # See ../golangci.yml file for the configuration.
+          command: |
+            golangci-lint run ./...
+
+  build:
+    docker:
+      - image: cimg/go:<< pipeline.parameters.golang-version >>
+
+    steps:
+      - checkout
+
+      - run:
+          name: Build
+          command: go build -mod=vendor ./...
+
+workflows:
+  version: 2
+  test-checks-build:
+    jobs:
+      - test
+      - checks
+      - build

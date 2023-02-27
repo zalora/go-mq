@@ -20,7 +20,6 @@ type Subscriber struct {
 
 	msgCh   chan mq.Message
 	closeCh chan struct{}
-	logger  mq.Logger
 }
 
 // NewSubscriber returns a new instance of Subscriber that can be used as an
@@ -161,4 +160,14 @@ func (s *Subscriber) Close() error {
 		return s.channel.Close()
 	}
 	return nil
+}
+
+func isAmqpAccessRefusedError(err error) bool {
+	var aErr *amqp.Error
+	if errors.As(err, &aErr) {
+		if aErr.Code == amqp.AccessRefused {
+			return true
+		}
+	}
+	return false
 }
