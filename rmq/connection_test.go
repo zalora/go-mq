@@ -45,8 +45,8 @@ func Test_NewChannel(t *testing.T) {
 		{
 			desc: "if the notify function has recoverable errors when the connection is active, they are handled without a crash",
 			notifyErrors: []*amqp.Error{
-				&amqp.Error{Code: 1, Reason: "no reason", Recover: true},
-				&amqp.Error{Code: 2, Reason: "no reason", Recover: true},
+				{Code: 1, Reason: "no reason", Recover: true},
+				{Code: 2, Reason: "no reason", Recover: true},
 			},
 		},
 	}

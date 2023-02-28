@@ -24,7 +24,9 @@ type Message struct {
 	// Deadletter is a specification/function that lets the caller put
 	// the message in a deadletter queue.
 	Deadletter func() error
-	Error      error
+
+	// Error holds the underlying error in case consume encountered an error.
+	Error error
 }
 
 // Header represents the key-value pairs in an mq header.
