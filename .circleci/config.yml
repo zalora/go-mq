@@ -28,7 +28,7 @@ jobs:
       - checkout
       - run:
           name: Run tests
-          command: go test -mod=vendor -race ./...
+          command: go test -race ./...
 
   checks:
     docker:
@@ -40,7 +40,7 @@ jobs:
       - run:
           name: Check gofmt
           command: |
-            files=$(go fmt -mod=vendor ./...)
+            files=$(go fmt ./...)
             [ -z "$files" ] && exit 0
             
             echo "Files not formatted:"
@@ -85,7 +85,7 @@ jobs:
 
       - run:
           name: Build
-          command: go build -mod=vendor ./...
+          command: go build ./...
 
 workflows:
   version: 2

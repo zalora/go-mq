@@ -36,12 +36,10 @@ To start developing clone via `git` or use go's get command to fetch this
 project.
 
 This project uses [go modules](https://github.com/golang/go/wiki/Modules) so
-make sure when adding new dependencies to update the `go.mod` file and the 
-vendor directory:
+make sure when adding new dependencies to update the `go.mod` and keep it clean:
 
 ```
 go mod tidy
-go mod vendor
 ```
 
 ## Licensing
