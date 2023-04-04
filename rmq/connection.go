@@ -5,7 +5,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
+
 	"github.com/zalora/go-mq"
 )
 
@@ -112,7 +113,6 @@ func (c *Conn) Close() {
 	if c.closeCh != nil {
 		close(c.closeCh)
 	}
-	return
 }
 
 // AmqpChannel is an implementation of the functions we need from
@@ -190,13 +190,4 @@ func (c *Conn) handleConnectionErr(url string, cfg amqp.Config) {
 			}()
 		}
 	}
-}
-
-func isAmqpAccessRefusedError(err error) bool {
-	if amqpError, ok := err.(*amqp.Error); ok {
-		if amqpError.Code == amqp.AccessRefused {
-			return true
-		}
-	}
-	return false
 }

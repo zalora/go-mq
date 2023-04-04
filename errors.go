@@ -10,6 +10,7 @@ type ConnTerminatedError struct {
 	Message string
 }
 
+// Error is the builtin error interface implementation.
 func (e *ConnTerminatedError) Error() string {
 	return e.Message
 }

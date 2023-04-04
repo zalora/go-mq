@@ -1,0 +1,38 @@
+run:
+  timeout: 5m
+
+linters:
+  # We run with all default linters enabled and in addition the linters
+  # listed below.
+  enable:
+    - bodyclose
+    - errorlint
+    - exportloopref
+    - goimports
+    - gosec
+    - makezero
+    - revive
+    - unconvert
+    - unparam
+    - wastedassign
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/zalora/go-mq
+
+issues:
+  # Maximum count of issues with the same text.
+  # Set to 0 to disable.
+  # Default: 3
+  max-same-issues: 0
+  exclude-rules:
+    - linters:
+        - staticcheck
+      # Deferring Close before checking for a possible error
+      text: "SA5001:"
+  include:
+    # Disable excluding of issues about comments from revive. This enables the
+    # warning that each exported var/const/struct/function/method should have
+    # a Godoc. It is disabled nby default via `exclude-use-default` which
+    # defaults to true.
+    - EXC0012

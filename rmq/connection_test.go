@@ -6,7 +6,7 @@ import (
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,8 +45,8 @@ func Test_NewChannel(t *testing.T) {
 		{
 			desc: "if the notify function has recoverable errors when the connection is active, they are handled without a crash",
 			notifyErrors: []*amqp.Error{
-				&amqp.Error{Code: 1, Reason: "no reason", Recover: true},
-				&amqp.Error{Code: 2, Reason: "no reason", Recover: true},
+				{Code: 1, Reason: "no reason", Recover: true},
+				{Code: 2, Reason: "no reason", Recover: true},
 			},
 		},
 	}
@@ -70,6 +70,8 @@ func Test_NewChannel(t *testing.T) {
 				CommitID:          "",
 				RetryForever:      testCase.retryForever,
 			})
+			assert.NoError(err)
+
 			_, err = conn.NewChannel()
 
 			assert.IsType(testCase.expectedError, err)

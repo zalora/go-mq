@@ -1,7 +1,7 @@
 package rmq
 
 import (
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type fakeAmqpConn struct {
@@ -40,7 +40,7 @@ type fakeDialler struct {
 	amqpConn AmqpConn
 }
 
-func (f *fakeDialler) DialConfig(url string, config amqp.Config) (AmqpConn, error) {
+func (f *fakeDialler) DialConfig(_ string, _ amqp.Config) (AmqpConn, error) {
 	return f.amqpConn, nil
 }
 
@@ -69,13 +69,15 @@ type fakeAmqpChannel struct {
 	notifyErr            *amqp.Error
 }
 
-func (f *fakeAmqpChannel) Consume(queue string,
-	consumer string,
-	autoAck bool,
-	exclusive bool,
-	noLocal bool,
-	noWait bool,
-	args amqp.Table) (<-chan amqp.Delivery, error) {
+func (f *fakeAmqpChannel) Consume(
+	_ string,
+	_ string,
+	_ bool,
+	_ bool,
+	_ bool,
+	_ bool,
+	_ amqp.Table,
+) (<-chan amqp.Delivery, error) {
 	deliveryCh := make(chan amqp.Delivery)
 	f.calls++
 	if f.calls > f.noOfCallsToReturnErr && f.calls == 0 && f.noOfCallsToReturnErr == 0 {

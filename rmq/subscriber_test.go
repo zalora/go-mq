@@ -1,14 +1,14 @@
 package rmq
 
 import (
+	"errors"
 	"testing"
 	"time"
 
-	"errors"
-
 	pkgerrors "github.com/pkg/errors"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
+
 	"github.com/zalora/go-mq"
 )
 
@@ -25,14 +25,14 @@ func Test_Subscribe(t *testing.T) {
 			desc:          "amqp type messages get converted to appropriate mq.Messages",
 			retryInterval: 1 * time.Second,
 			amqpDeliveryList: []amqp.Delivery{
-				amqp.Delivery{
+				{
 					RoutingKey: "test.event",
 					Headers:    map[string]interface{}{"some_random_header": "random_header_value"},
 					Body:       []byte(`{"body": "lots of content"}`),
 				},
 			},
 			expectedMessages: []mq.Message{
-				mq.Message{
+				{
 					Type:   "test.event",
 					Header: map[string]interface{}{"some_random_header": "random_header_value"},
 					Body:   []byte(`{"body": "lots of content"}`),
@@ -44,7 +44,7 @@ func Test_Subscribe(t *testing.T) {
 			retryInterval: 1 * time.Second,
 			channelErr:    errors.New("consume error"),
 			expectedMessages: []mq.Message{
-				mq.Message{
+				{
 					Type:  "error-rmq",
 					Error: pkgerrors.Wrap(errors.New("consume error"), "error during consume"),
 				},
@@ -54,14 +54,14 @@ func Test_Subscribe(t *testing.T) {
 			desc:          "if notifyerror returns an error, its handled and retried",
 			retryInterval: 1 * time.Second,
 			amqpDeliveryList: []amqp.Delivery{
-				amqp.Delivery{
+				{
 					RoutingKey: "test.event",
 					Headers:    map[string]interface{}{"some_random_header": "random_header_value"},
 					Body:       []byte(`{"body": "lots of content"}`),
 				},
 			},
 			expectedMessages: []mq.Message{
-				mq.Message{
+				{
 					Type:   "test.event",
 					Header: map[string]interface{}{"some_random_header": "random_header_value"},
 					Body:   []byte(`{"body": "lots of content"}`),
